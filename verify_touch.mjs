@@ -9,8 +9,8 @@ const URL = process.argv[2] || "http://localhost:8765/index.html";
 const OUTDIR = process.argv[3] || "/Users/farhankhan/claude/archery-game";
 const CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const PORT = 9223;
-// Pixel 8 Pro logical viewport
-const VW = 412, VH = 915, DSF = 2.625;
+// Pixel 10 Pro logical viewport
+const VW = 412, VH = 915, DSF = 3;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -90,6 +90,26 @@ async function main() {
   out.canvasTouchAction = await ev("getComputedStyle(document.getElementById('game')).touchAction");
   out.stateAtLoad = await ev("window.__archery.state");
 
+  // ---- Geometry: nothing may overflow the viewport ----
+  out.geom = JSON.parse(await ev(`(()=>{
+    const w=window.__archery.layout();
+    const cr=document.getElementById('game').getBoundingClientRect();
+    const hr=document.getElementById('hud').getBoundingClientRect();
+    return JSON.stringify({
+      vw:${VW}, dpr:devicePixelRatio,
+      docScrollW:document.documentElement.scrollWidth,
+      canvasRight:cr.right, canvasLeft:cr.x, canvasW:cr.width,
+      hudRight:hr.right, hudLeft:hr.x,
+      targetX:w.targetX, targetR:w.targetR,
+      targetRightEdge:w.targetX+w.targetR, targetLeftEdge:w.targetX-w.targetR,
+      anchorX:w.anchor.x, anchorY:w.anchor.y
+    });
+  })()`));
+  out.targetFullyVisible = out.geom.targetRightEdge <= VW && out.geom.targetLeftEdge >= 0;
+  out.hudFullyVisible = out.geom.hudRight <= VW + 0.5 && out.geom.hudLeft >= -0.5;
+  out.noHorizontalOverflow = out.geom.docScrollW <= VW + 0.5 && out.geom.canvasRight <= VW + 0.5;
+  out.bowReachableLowerLeft = out.geom.anchorX < VW * 0.45 && out.geom.anchorY > VH * 0.5;
+
   // ---- 2) Start the game with a REAL touch tap on the Start button ----
   const btn = await ev("(()=>{const r=document.getElementById('startBtn').getBoundingClientRect();return JSON.stringify({x:r.x+r.width/2,y:r.y+r.height/2})})()");
   const b = JSON.parse(btn);
@@ -143,6 +163,10 @@ async function main() {
   const pass =
     out.overlayVisibleAtLoad === true &&
     out.canvasTouchAction === "none" &&
+    out.targetFullyVisible === true &&            // target not clipped on the right
+    out.hudFullyVisible === true &&               // ARROWS/SCORE/ROUND not clipped
+    out.noHorizontalOverflow === true &&          // canvas fits the viewport
+    out.bowReachableLowerLeft === true &&
     out.stateAfterTouchStart === "aiming" &&     // start worked via real touch
     out.aimingMidDraw === true &&                // drag registered via real touch
     out.drawPowerMidDraw > 0 &&

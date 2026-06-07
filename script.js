@@ -21,23 +21,45 @@
   let W = 0, H = 0, DPR = 1;
   const view = {}; // computed layout points
 
+  function viewportSize() {
+    // Use the SMALLEST sane width measurement so the canvas can never be wider
+    // than the visible screen (innerWidth can be wrong/too-large at first paint
+    // on mobile, which pushes the right side of the world off-screen).
+    const vv = window.visualViewport;
+    const widthCandidates = [
+      window.innerWidth,
+      document.documentElement && document.documentElement.clientWidth,
+      vv && vv.width,
+    ].filter((n) => typeof n === "number" && n > 0);
+    const heightCandidates = [
+      window.innerHeight,
+      document.documentElement && document.documentElement.clientHeight,
+      vv && vv.height,
+    ].filter((n) => typeof n === "number" && n > 0);
+    const w = widthCandidates.length ? Math.min(...widthCandidates) : 390;
+    const h = heightCandidates.length ? Math.max(...heightCandidates) : 844;
+    return { w, h };
+  }
+
   function resize() {
-    DPR = Math.min(window.devicePixelRatio || 1, 2);
-    W = window.innerWidth;
-    H = window.innerHeight;
-    canvas.width = Math.floor(W * DPR);
-    canvas.height = Math.floor(H * DPR);
+    DPR = Math.min(window.devicePixelRatio || 1, 3); // honor hi-dpi (Pixel = 3)
+    const { w, h } = viewportSize();
+    W = w; H = h;
+    // CSS size == visible viewport; backing store scaled for sharpness.
     canvas.style.width = W + "px";
     canvas.style.height = H + "px";
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     layout();
   }
 
   function layout() {
     view.groundY = H * 0.86;
-    view.anchor = { x: W * 0.2, y: view.groundY - H * 0.12 }; // bow hand
-    view.targetX = W * 0.8;
-    view.targetR = Math.max(38, Math.min(W, H) * 0.11);
+    view.anchor = { x: W * 0.18, y: view.groundY - H * 0.12 }; // bow hand (lower-left)
+    view.targetR = Math.max(34, Math.min(W * 0.13, H * 0.085));
+    // keep the whole target safely inside the right edge
+    view.targetX = Math.min(W * 0.76, W - view.targetR - W * 0.06);
     view.targetMinY = H * 0.18 + view.targetR;
     view.targetMaxY = view.groundY - view.targetR - H * 0.02;
   }
@@ -578,7 +600,15 @@
 
   el.startBtn.addEventListener("click", () => { audio(); startGame(); });
   window.addEventListener("resize", resize);
-  window.addEventListener("orientationchange", () => setTimeout(resize, 200));
+  window.addEventListener("orientationchange", () => { resize(); setTimeout(resize, 250); });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", resize);
+    window.visualViewport.addEventListener("scroll", resize);
+  }
+  window.addEventListener("load", resize);
+  // re-run once the layout viewport has definitely settled after first paint
+  setTimeout(resize, 100);
+  setTimeout(resize, 500);
 
   resize();
   loop();
