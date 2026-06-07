@@ -168,25 +168,38 @@
     return { x: t.clientX - r.left, y: t.clientY - r.top };
   }
 
+  let pointerDot = null; // {x, y, age} — visible tap indicator
+
   function onDown(e) {
-    if (state !== "aiming") return;
     e.preventDefault();
     audio();
     const p = pos(e);
+    pointerDot = { x: p.x, y: p.y, age: 1 };
+    try { canvas.setPointerCapture && e.pointerId != null && canvas.setPointerCapture(e.pointerId); } catch (_) {}
+    if (state !== "aiming") return;
     aim = { sx: p.x, sy: p.y, cx: p.x, cy: p.y };
   }
 
   function onMove(e) {
-    if (!aim || state !== "aiming") return;
     e.preventDefault();
     const p = pos(e);
+    pointerDot = { x: p.x, y: p.y, age: 1 };
+    if (!aim || state !== "aiming") return;
     aim.cx = p.x; aim.cy = p.y;
   }
 
   function onUp(e) {
-    if (!aim || state !== "aiming") return;
     e.preventDefault();
+    const p = pos(e);
+    pointerDot = { x: p.x, y: p.y, age: 1 };
+    try { e.pointerId != null && canvas.releasePointerCapture && canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+    if (!aim || state !== "aiming") return;
     release();
+  }
+
+  function onCancel(e) {
+    // Browser took over the gesture — drop the aim without firing.
+    aim = null;
   }
 
   // Compute launch vector from current aim. Pull = start - current (drag back).
@@ -276,6 +289,12 @@
     // popups
     for (const p of popups) { p.y -= 0.8; p.life -= 0.018; }
     popups = popups.filter(p => p.life > 0);
+
+    // pointer indicator fade (only while not actively aiming)
+    if (pointerDot && !aim) {
+      pointerDot.age -= 0.03;
+      if (pointerDot.age <= 0) pointerDot = null;
+    }
   }
 
   let settleTimer = null;
@@ -508,6 +527,22 @@
 
     drawPopups();
 
+    // visible pointer indicator — confirms taps are registering
+    if (pointerDot) {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1, pointerDot.age));
+      ctx.beginPath();
+      ctx.arc(pointerDot.x, pointerDot.y, 16, 0, Math.PI * 2);
+      ctx.strokeStyle = "#ffe27a";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(pointerDot.x, pointerDot.y, 5, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffe27a";
+      ctx.fill();
+      ctx.restore();
+    }
+
     if (flash > 0) {
       ctx.fillStyle = "rgba(255,236,150," + (flash * 0.25) + ")";
       ctx.fillRect(0, 0, W, H);
@@ -521,14 +556,25 @@
   }
 
   // ---- Wire up ----
-  canvas.addEventListener("pointerdown", onDown, { passive: false });
-  canvas.addEventListener("pointermove", onMove, { passive: false });
-  canvas.addEventListener("pointerup", onUp, { passive: false });
-  canvas.addEventListener("pointercancel", onUp, { passive: false });
-  // touch fallbacks
-  canvas.addEventListener("touchstart", onDown, { passive: false });
-  canvas.addEventListener("touchmove", onMove, { passive: false });
-  canvas.addEventListener("touchend", onUp, { passive: false });
+  // Pointer Events cover mouse, touch and stylus in one path (no double-firing).
+  // passive:false so preventDefault() actually suppresses scroll/zoom; the canvas
+  // also has `touch-action: none` in CSS, which is what lets the gesture reach us.
+  const supportsPointer = window.PointerEvent !== undefined;
+  if (supportsPointer) {
+    canvas.addEventListener("pointerdown", onDown, { passive: false });
+    canvas.addEventListener("pointermove", onMove, { passive: false });
+    canvas.addEventListener("pointerup", onUp, { passive: false });
+    canvas.addEventListener("pointercancel", onCancel, { passive: false });
+  } else {
+    // Legacy fallback: raw touch + mouse.
+    canvas.addEventListener("touchstart", onDown, { passive: false });
+    canvas.addEventListener("touchmove", onMove, { passive: false });
+    canvas.addEventListener("touchend", onUp, { passive: false });
+    canvas.addEventListener("touchcancel", onCancel, { passive: false });
+    canvas.addEventListener("mousedown", onDown, { passive: false });
+    canvas.addEventListener("mousemove", onMove, { passive: false });
+    canvas.addEventListener("mouseup", onUp, { passive: false });
+  }
 
   el.startBtn.addEventListener("click", () => { audio(); startGame(); });
   window.addEventListener("resize", resize);
@@ -542,6 +588,17 @@
     get state() { return state; },
     get score() { return score; },
     get round() { return round; },
+    // read-only observers used to assert that REAL pointer/touch events
+    // reached the handlers (they perform no actions themselves)
+    get aiming() { return !!aim; },
+    get arrowsLeft() { return arrowsLeft; },
+    get hasArrow() { return !!arrow; },
+    get pointerSeen() { return !!pointerDot; },
+    get drawPower() {
+      if (!aim) return 0;
+      const dx = aim.sx - aim.cx, dy = aim.sy - aim.cy;
+      return Math.min(Math.hypot(dx, dy), MAX_DRAW()) / MAX_DRAW();
+    },
     start: startGame,
     // fire an arrow at angleDeg (0=right, negative=up) with power 0..1
     shoot(angleDeg, power) {
