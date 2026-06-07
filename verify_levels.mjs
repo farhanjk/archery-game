@@ -68,7 +68,7 @@ async function main() {
     await tap(c.x, c.y); await sleep(300);
   }
   // plan a hitting (angle,power) for the current instant, then perform it as a real touch drag
-  async function fireShot() {
+  async function fireDrag() {
     const plan = JSON.parse(await ev("JSON.stringify(window.__archery.planShot())") || "null");
     if (!plan) return false;
     const md = await ev("window.__archery.maxDraw()");
@@ -81,8 +81,21 @@ async function main() {
     const STEPS = 6;
     for (let i = 1; i <= STEPS; i++) { const t = i / STEPS; await tMove(sx + (cx - sx) * t, sy + (cy - sy) * t); await sleep(18); }
     await tEnd();
-    await sleep(1750); // flight + settle
     return true;
+  }
+  async function fireShot() { const ok = await fireDrag(); await sleep(1750); return ok; } // drag + flight + settle
+  // fire, then grab a frame while the impact particle burst is alive
+  async function fireAndCaptureBurst(name) {
+    await fireDrag();
+    let maxParticles = 0, captured = false;
+    for (let i = 0; i < 70; i++) { // poll up to ~2.8s
+      const n = await ev("window.__archery.particles");
+      maxParticles = Math.max(maxParticles, n);
+      if (n > 0) { await sleep(110); await shot(name); captured = true; break; } // let sparks spread
+      await sleep(40);
+    }
+    await sleep(1200); // let it settle before continuing
+    return { maxParticles, captured };
   }
 
   const out = { url: URL, viewport: `${VW}x${VH}@${DSF}`, levels: [] };
@@ -117,6 +130,19 @@ async function main() {
     info.proof = await shot(`proof_level${idx + 1}.png`);
     out.levels.push(info);
   }
+
+  // ---- Juice pass: combo + particle burst (captures proof_juice.png mid-hit) ----
+  await nav();
+  await tapLevel(0);
+  await fireShot();                              // hit #1 -> combo 1
+  const comboAfter1 = await ev("window.__archery.combo");
+  const burst = await fireAndCaptureBurst(`${OUTDIR}/proof_juice.png`.replace(OUTDIR + "/", "")); // hit #2 -> combo 2 + burst
+  const comboAfter2 = await ev("window.__archery.combo");
+  out.juice = {
+    comboAfter1, comboAfter2,
+    particlesSeen: burst.maxParticles, captured: burst.captured,
+    proof: `${OUTDIR}/proof_juice.png`,
+  };
 
   // ---- Full loop on Level 1: complete 5 rounds -> bounce to select + persist high score ----
   await nav();
@@ -160,6 +186,10 @@ async function main() {
     out.fullLoop.overlayVisible === true &&
     out.fullLoop.bestForL1 > 0 &&
     out.persistence.bestApi > 0 &&
+    out.juice.comboAfter1 === 1 &&             // combo increments on hit
+    out.juice.comboAfter2 === 2 &&
+    out.juice.particlesSeen > 0 &&             // particle burst fired
+    out.juice.captured === true &&             // proof_juice captured mid-burst
     out.exceptions.length === 0;
 
   console.log(pass ? "\nRESULT: PASS ✅ — all 3 levels playable via real touch, loop + persistence OK" : "\nRESULT: FAIL ❌");

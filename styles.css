@@ -148,6 +148,15 @@ html, body {
   color: #fff;
 }
 
+#result .sub {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 700;
+  opacity: 0.85;
+  margin-top: 4px;
+  color: var(--ink);
+}
+
 #levelSelect {
   display: flex;
   flex-direction: column;
@@ -182,6 +191,8 @@ html, body {
 .levelBtn[data-level="0"] { border-left: 4px solid #7ee081; }
 .levelBtn[data-level="1"] { border-left: 4px solid #ffcf3f; }
 .levelBtn[data-level="2"] { border-left: 4px solid #ff5b4a; }
+.levelBtn[data-level="3"] { border-left: 4px solid #b58cff; background: linear-gradient(180deg, #34315e, #272447); }
+.levelBtn.daily .lvHead b { color: #d9c6ff; }
 
 .levelBtn .lvHead { font-size: 19px; font-weight: 700; }
 .levelBtn .lvHead b { font-weight: 800; }
