@@ -11,6 +11,7 @@
 <body>
   <div id="app">
     <header id="hud">
+      <div class="hud-item"><span class="label">LEVEL</span><span id="level">1</span></div>
       <div class="hud-item"><span class="label">SCORE</span><span id="score">0</span></div>
       <div class="hud-item"><span class="label">ROUND</span><span id="round">1</span><span class="sep">/</span><span id="roundMax">5</span></div>
       <div class="hud-item"><span class="label">ARROWS</span><span id="arrows">3</span></div>
@@ -23,9 +24,25 @@
     <div id="overlay">
       <div class="card">
         <h1 id="overTitle">🏹 Tap &amp; Twang</h1>
-        <p id="overText">Drag back to draw the bow. Aim high to beat gravity. Hit the gold center for 100!</p>
-        <div id="finalScore" class="hidden"></div>
-        <button id="startBtn">Start</button>
+        <p id="overText">Pick a level — drag back from the bow, aim, release to shoot.</p>
+        <div id="result" class="hidden"></div>
+        <div id="levelSelect">
+          <button class="levelBtn" data-level="0">
+            <span class="lvHead"><b>Level 1</b> · Rookie</span>
+            <span class="lvDesc">Still target · no wind</span>
+            <span class="lvBest" data-best="0">Best 0</span>
+          </button>
+          <button class="levelBtn" data-level="1">
+            <span class="lvHead"><b>Level 2</b> · Archer</span>
+            <span class="lvDesc">Moving target · light wind</span>
+            <span class="lvBest" data-best="1">Best 0</span>
+          </button>
+          <button class="levelBtn" data-level="2">
+            <span class="lvHead"><b>Level 3</b> · Master</span>
+            <span class="lvDesc">Fast target · gusty wind · small face</span>
+            <span class="lvBest" data-best="2">Best 0</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>

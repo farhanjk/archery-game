@@ -53,13 +53,13 @@ html, body {
   white-space: nowrap;
   gap: 4px;
   font-weight: 700;
-  font-size: 20px;
+  font-size: 17px;
   text-shadow: 0 1px 3px rgba(0,0,0,0.4);
 }
 
 .hud-item .label {
-  font-size: 11px;
-  letter-spacing: 1.5px;
+  font-size: 9.5px;
+  letter-spacing: 1px;
   opacity: 0.7;
   font-weight: 800;
 }
@@ -128,19 +128,65 @@ html, body {
   font-size: 15px;
 }
 
-#finalScore {
-  font-size: 18px;
+#result {
+  font-size: 16px;
   font-weight: 700;
-  margin-bottom: 18px;
+  margin: -6px 0 18px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255,204,63,0.12);
+  border: 1px solid rgba(255,204,63,0.35);
   color: var(--accent);
+  line-height: 1.4;
 }
 
-#finalScore .big {
+#result .big {
   display: block;
-  font-size: 44px;
+  font-size: 40px;
   line-height: 1.1;
-  margin-top: 4px;
+  margin-top: 2px;
+  color: #fff;
 }
+
+#levelSelect {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.levelBtn {
+  appearance: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  width: 100%;
+  min-height: 64px;
+  text-align: left;
+  padding: 14px 16px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #2f4a64, #25394e);
+  color: var(--ink);
+  box-shadow: 0 4px 0 rgba(0,0,0,0.25), 0 8px 16px rgba(0,0,0,0.3);
+  transition: transform 0.06s ease, box-shadow 0.06s ease, border-color 0.1s;
+}
+
+.levelBtn:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.25), 0 3px 8px rgba(0,0,0,0.3);
+  border-color: var(--accent);
+}
+
+.levelBtn[data-level="0"] { border-left: 4px solid #7ee081; }
+.levelBtn[data-level="1"] { border-left: 4px solid #ffcf3f; }
+.levelBtn[data-level="2"] { border-left: 4px solid #ff5b4a; }
+
+.levelBtn .lvHead { font-size: 19px; font-weight: 700; }
+.levelBtn .lvHead b { font-weight: 800; }
+.levelBtn .lvDesc { font-size: 12.5px; opacity: 0.72; font-weight: 600; }
+.levelBtn .lvBest { font-size: 12px; opacity: 0.85; font-weight: 800; color: var(--accent); letter-spacing: 0.5px; }
 
 button {
   appearance: none;
